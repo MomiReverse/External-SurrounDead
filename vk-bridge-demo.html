@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VK Bridge Resize Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        #app-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 20px;
+            margin: 0 auto;
+            transition: all 0.3s ease;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button.danger {
+            background: #f44336;
+        }
+
+        button.danger:hover {
+            background: #da190b;
+        }
+
+        .info-panel {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .status.wide {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.standard {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .game-area {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .size-display {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-family: monospace;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <div class="info-panel">
+            <h2>VK Bridge Resize Demo</h2>
+            <p>
+                Текущий режим: <span id="mode-status" class="status">Определяется...</span>
+            </p>
+            <p>
+                Размеры окна: <span id="window-size">Загрузка...</span>
+            </p>
+            <p>
+                Доступная ширина: <span id="available-width">Загрузка...</span>
+            </p>
+        </div>
+
+        <div class="controls">
+            <button onclick="resizeManager.setMobileMode()">Мобильный режим (600x600)</button>
+            <button onclick="resizeManager.setGameMode()">Игровой режим (1200x800)</button>
+            <button onclick="resizeManager.resizeToContent()">По содержимому</button>
+            <button onclick="resizeManager.resizeWindow(800, 600)">Стандартный (800x600)</button>
+            <button onclick="resizeManager.resizeWindow(1500, 900)" class="danger">Широкий (1500x900)</button>
+        </div>
+
+        <div class="game-area" id="main-content">
+            <div>
+                <h3>Игровая область</h3>
+                <p>Это демонстрационная игровая область</p>
+                <p>Попробуйте изменить размеры окна с помощью кнопок выше</p>
+            </div>
+        </div>
+
+        <div class="size-display" id="size-info">
+            Информация о размерах будет отображаться здесь...
+        </div>
+    </div>
+
+    <!-- Подключение VK Bridge (если доступен) -->
+    <script src="https://vk.com/js/api/openapi.js?169"></script>
+    
+    <!-- Наш менеджер размеров -->
+    <script src="vk-bridge-resize-solution.js"></script>
+    
+    <script>
+        // Глобальная переменная для доступа к менеджеру
+        let resizeManager;
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            resizeManager = new VKResizeManager();
+            
+            // Обновляем информацию о размерах
+            updateSizeInfo();
+            
+            // Обновляем информацию каждую секунду
+            setInterval(updateSizeInfo, 1000);
+            
+            // Обработчик изменения размера окна
+            window.addEventListener('resize', updateSizeInfo);
+        });
+
+        function updateSizeInfo() {
+            const modeStatus = document.getElementById('mode-status');
+            const windowSize = document.getElementById('window-size');
+            const availableWidth = document.getElementById('available-width');
+            const sizeInfo = document.getElementById('size-info');
+
+            if (resizeManager) {
+                // Обновляем статус режима
+                const isWide = resizeManager.detectWideMode();
+                modeStatus.textContent = isWide ? 'Широкоформатный' : 'Стандартный';
+                modeStatus.className = `status ${isWide ? 'wide' : 'standard'}`;
+
+                // Обновляем информацию о размерах
+                windowSize.textContent = `${window.innerWidth} x ${window.innerHeight}`;
+                availableWidth.textContent = `${window.screen.width}px`;
+
+                // Подробная информация
+                const info = `
+                    <strong>Детальная информация:</strong><br>
+                    • Ширина экрана: ${window.screen.width}px<br>
+                    • Ширина viewport: ${window.innerWidth}px<br>
+                    • Высота viewport: ${window.innerHeight}px<br>
+                    • Режим: ${isWide ? 'Широкоформатный' : 'Стандартный'}<br>
+                    • VK Bridge: ${window.vkBridge ? 'Доступен' : 'Недоступен'}<br>
+                    • Ограничения VK: ${resizeManager.minStandardWidth}-${resizeManager.maxStandardWidth}px
+                `;
+                sizeInfo.innerHTML = info;
+            }
+        }
+
+        // Демонстрация работы с VK Bridge (если доступен)
+        if (window.vkBridge) {
+            console.log('VK Bridge доступен');
+            
+            // Подписываемся на события VK Bridge
+            window.vkBridge.subscribe((e) => {
+                console.log('VK Bridge событие:', e);
+            });
+        } else {
+            console.log('VK Bridge недоступен (запущено вне VK)');
+        }
+    </script>
+</body>
+</html>
